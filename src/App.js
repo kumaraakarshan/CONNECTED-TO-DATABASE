@@ -1,21 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import MoviesList from './components/MoviesList';
 import './App.css';
 
 function App() {
   const [movies, setMovies] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [retrying, setRetrying] = useState(false);
   const [retryInterval, setRetryInterval] = useState(null);
 
-  async function fetchMoviesHandler() {
+  const fetchMovies = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
       const response = await fetch('https://swapi.dev/api/films');
       if (!response.ok) {
-        throw new Error('Failed to fetch movies. retrying');
+        throw new Error('Failed to fetch movies. Retrying...');
       }
       const data = await response.json();
 
@@ -38,18 +38,11 @@ function App() {
       console.error('Error fetching movies:', error);
       setRetrying(true); // Set retrying to true when an error occurs
     }
-  }
+  }, [retryInterval]);
 
   useEffect(() => {
-    if (retrying) {
-      const interval = setInterval(() => {
-        fetchMoviesHandler(); // Retry fetching movies
-      }, 5000); // Retry every 5 seconds
-      setRetryInterval(interval);
-    } else {
-      clearInterval(retryInterval); // Clear the retry interval when not retrying
-    }
-  }, [retrying, retryInterval]);
+    fetchMovies();
+  }, [fetchMovies]);
 
   const cancelRetryHandler = () => {
     setRetrying(false);
@@ -57,10 +50,16 @@ function App() {
     setIsLoading(false); // Reset the loading state
   };
 
+  const fetchMoviesHandler = () => {
+    fetchMovies();
+  };
+
+  const retryButtonDisabled = retrying || isLoading;
+
   return (
     <React.Fragment>
       <section>
-        <button onClick={fetchMoviesHandler} disabled={retrying || isLoading}>
+        <button onClick={fetchMoviesHandler} disabled={retryButtonDisabled}>
           Fetch Movies
         </button>
         {retrying && (
